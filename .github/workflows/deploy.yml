@@ -1,0 +1,109 @@
+name: 🚀 部署到自有服务器
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: 构建并部署到服务器
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🟢 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 安装依赖
+        run: npm ci
+
+      - name: 🔨 构建项目
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: 🚚 准备服务器
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            # 确保目标目录存在并设置权限
+            sudo mkdir -p /var/www/blog
+            sudo chown -R deploy:www-data /var/www/blog
+            
+            # 清理目标目录
+            sudo rm -rf /var/www/blog/*
+            
+            # 清理临时文件（如果有）
+            rm -rf /tmp/dist
+
+      - name: 📤 直接上传构建文件到目标目录
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: 'dist/*'
+          target: '/var/www/blog/'
+          strip_components: 1
+
+      - name: 🔧 设置权限
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            # 设置正确的权限
+            chmod -R 755 /var/www/blog
+            sudo chown -R deploy:www-data /var/www/blog
+            
+            echo "✅ 部署完成！"
+
+      - name: 🔄 重载 Nginx
+        if: success()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "🔄 重载 Nginx..."
+            if sudo nginx -t; then
+              sudo systemctl reload nginx
+              echo "✅ Nginx 重载成功"
+            else
+              echo "❌ Nginx 配置测试失败"
+              exit 1
+            fi
+
+      - name: 🎉 部署成功通知
+        if: success()
+        run: |
+          echo "🎉 网站已成功部署到服务器！"
+          echo "🌐 访问地址: http://${{ secrets.HOST }}"
+
+      - name: ❌ 部署失败处理
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "❌ 部署失败，清理临时文件..."
+
+            # 清理临时文件
+            rm -rf /tmp/website-build /tmp/blog_deploy.sh /tmp/dist
+            
+            echo "⚠️ 请检查部署日志并手动处理"
