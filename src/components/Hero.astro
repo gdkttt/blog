@@ -1,0 +1,53 @@
+---
+import { config } from '../config';
+
+const { title, subtitle, email, github } = config.personal;
+const coreValue = "技术深度 × 管理经验 × AI 视野 × 产品思维";
+const tags = [
+  "8 年前端深度经验",
+  "3 年团队管理实践",
+  "AI 技术学习者",
+  "产品思维践行者",
+];
+---
+
+<section class="relative h-screen flex items-center justify-center text-center bg-gray-900 overflow-hidden pt-20">
+  <div class="absolute inset-0 bg-grid-yellow-400/10 [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
+  <div class="relative z-10 p-4">
+    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-yellow-200 to-yellow-500">
+      {title}
+    </h1>
+    <h2 class="mt-4 text-2xl md:text-3xl font-semibold text-gray-300">
+      {subtitle}
+    </h2>
+    <p class="mt-6 text-lg md:text-xl text-yellow-400 font-mono tracking-wider">
+      {coreValue}
+    </p>
+    <div class="mt-8 flex flex-wrap justify-center gap-3 md:gap-4">
+      {tags.map(tag => (
+        <span class="bg-gray-800/50 border border-yellow-400/30 text-gray-200 text-sm font-medium px-4 py-2 rounded-full shadow-md transition-all hover:bg-yellow-400/10 hover:scale-105">
+          {tag}
+        </span>
+      ))}
+    </div>
+    <div class="mt-10 flex justify-center space-x-6">
+      <a href={github} target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-yellow-400 transition-colors duration-300">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.03 1.595 1.03 2.688 0 3.848-2.338 4.695-4.566 4.943.359.308.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" />
+        </svg>
+      </a>
+      <a href={`mailto:${email}`} class="text-gray-400 hover:text-yellow-400 transition-colors duration-300">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .bg-grid-yellow-400\/10 {
+    background-image: linear-gradient(theme(colors.yellow.400 / 0.05) 1px, transparent 1px), linear-gradient(to right, theme(colors.yellow.400 / 0.05) 1px, transparent 1px);
+    background-size: 2rem 2rem;
+  }
+</style>

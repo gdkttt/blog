@@ -1,63 +1,97 @@
 ---
-import AboutHeroImage from '../assets/blog-placeholder-about.jpg';
-import Layout from '../layouts/BlogPost.astro';
+import Layout from '../layouts/Layout.astro';
+import { config } from '../config';
+
+const { personal } = config;
 ---
 
-<Layout
-	title="About Me"
-	description="Lorem ipsum dolor sit amet"
-	pubDate={new Date('August 08 2021')}
-	heroImage={AboutHeroImage}
->
-	<p>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-		labore et dolore magna aliqua. Vitae ultricies leo integer malesuada nunc vel risus commodo
-		viverra. Adipiscing enim eu turpis egestas pretium. Euismod elementum nisi quis eleifend quam
-		adipiscing. In hac habitasse platea dictumst vestibulum. Sagittis purus sit amet volutpat. Netus
-		et malesuada fames ac turpis egestas. Eget magna fermentum iaculis eu non diam phasellus
-		vestibulum lorem. Varius sit amet mattis vulputate enim. Habitasse platea dictumst quisque
-		sagittis. Integer quis auctor elit sed vulputate mi. Dictumst quisque sagittis purus sit amet.
-	</p>
+<Layout title={`关于我 - ${personal.name}`}>
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 pt-40">
+    <header class="text-center mb-20">
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-yellow-200 to-yellow-500">
+        关于我
+      </h1>
+      <p class="mt-4 text-xl md:text-2xl font-semibold text-gray-300">
+        {personal.title} | {personal.subtitle}
+      </p>
+    </header>
 
-	<p>
-		Morbi tristique senectus et netus. Id semper risus in hendrerit gravida rutrum quisque non
-		tellus. Habitasse platea dictumst quisque sagittis purus sit amet. Tellus molestie nunc non
-		blandit massa. Cursus vitae congue mauris rhoncus. Accumsan tortor posuere ac ut. Fringilla urna
-		porttitor rhoncus dolor. Elit ullamcorper dignissim cras tincidunt lobortis. In cursus turpis
-		massa tincidunt dui ut ornare lectus. Integer feugiat scelerisque varius morbi enim nunc.
-		Bibendum neque egestas congue quisque egestas diam. Cras ornare arcu dui vivamus arcu felis
-		bibendum. Dignissim suspendisse in est ante in nibh mauris. Sed tempus urna et pharetra pharetra
-		massa massa ultricies mi.
-	</p>
+    <!-- 职业画像 -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-bold text-center mb-12 text-yellow-400">职业画像</h2>
+      <div class="grid md:grid-cols-2 gap-12 items-start">
+        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700/50">
+          <h3 class="text-2xl font-bold text-yellow-400 mb-4">技术深度与广度并重的实战专家</h3>
+          <ul class="space-y-4 text-gray-300">
+            <li><strong class="font-semibold text-gray-100">8 年前端技术深耕:</strong> 从一线开发到复杂项目架构，具备扎实的编码能力和问题解决经验。</li>
+            <li><strong class="font-semibold text-gray-100">React 生态系统核心技能:</strong> 精通 React、Next.js、TypeScript，并持续跟进社区前沿动态。</li>
+            <li><strong class="font-semibold text-gray-100">跨平台产品开发能力:</strong> 具备小程序、Web、桌面端等多端统一开发与交付经验。</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800/50 p-8 rounded-lg border border-gray-700/50">
+          <h3 class="text-2xl font-bold text-yellow-400 mb-4">以结果为导向的团队领导者</h3>
+          <ul class="space-y-4 text-gray-300">
+            <li><strong class="font-semibold text-gray-100">3 年团队管理实践:</strong> 带领团队高效完成业务目标，在多变的环境中保持战斗力。</li>
+            <li><strong class="font-semibold text-gray-100">管理方法论建立:</strong> 结合 OKR 与敏捷开发，形成了一套行之有效的项目推进和人员管理方法。</li>
+            <li><strong class="font-semibold text-gray-100">团队协作体系建设:</strong> 推动 Code Review、技术分享、文档沉淀等机制，营造积极的技术氛围。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-	<p>
-		Mollis nunc sed id semper risus in. Convallis a cras semper auctor neque. Diam sit amet nisl
-		suscipit. Lacus viverra vitae congue eu consequat ac felis donec. Egestas integer eget aliquet
-		nibh praesent tristique magna sit amet. Eget magna fermentum iaculis eu non diam. In vitae
-		turpis massa sed elementum. Tristique et egestas quis ipsum suspendisse ultrices. Eget lorem
-		dolor sed viverra ipsum. Vel turpis nunc eget lorem dolor sed viverra. Posuere ac ut consequat
-		semper viverra nam. Laoreet suspendisse interdum consectetur libero id faucibus. Diam phasellus
-		vestibulum lorem sed risus ultricies tristique. Rhoncus dolor purus non enim praesent elementum
-		facilisis. Ultrices tincidunt arcu non sodales neque. Tempus egestas sed sed risus pretium quam
-		vulputate. Viverra suspendisse potenti nullam ac tortor vitae purus faucibus ornare. Fringilla
-		urna porttitor rhoncus dolor purus non. Amet dictum sit amet justo donec enim.
-	</p>
+    <!-- 当前转型战略 -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-bold text-center mb-12 text-yellow-400">当前转型战略</h2>
+      <div class="max-w-4xl mx-auto bg-gray-800/50 p-8 rounded-lg border border-gray-700/50">
+        <h3 class="text-2xl font-bold text-yellow-400 mb-4">主动拥抱 AI 变革的技术前瞻者</h3>
+        <p class="text-gray-300 mb-4">
+          在最近的 Gap 期，我没有选择休息，而是将其视为一次战略性的自我投资。我正全力以赴地学习 AI 相关知识，旨在将过去积累的技术和管理能力与 AI 浪潮相结合，成为一名 AI+产品的复合型技术管理者。
+        </p>
+        <div class="mt-6">
+          <h4 class="text-xl font-semibold text-gray-100 mb-3">个人价值主张：四维能力矩阵</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div class="bg-gray-700/50 p-4 rounded-md">技术深度</div>
+            <div class="bg-gray-700/50 p-4 rounded-md">管理经验</div>
+            <div class="bg-gray-700/50 p-4 rounded-md">AI 视野</div>
+            <div class="bg-gray-700/50 p-4 rounded-md">产品思维</div>
+          </div>
+          <p class="mt-4 text-gray-400 text-sm">我的独特价值在于能将这四者有机结合，既能理解底层技术实现，又能把握产品战略方向，并利用 AI 提升团队效率和产品价值。</p>
+        </div>
+      </div>
+    </section>
 
-	<p>
-		Mattis ullamcorper velit sed ullamcorper morbi tincidunt. Tortor posuere ac ut consequat semper
-		viverra. Tellus mauris a diam maecenas sed enim ut sem viverra. Venenatis urna cursus eget nunc
-		scelerisque viverra mauris in. Arcu ac tortor dignissim convallis aenean et tortor at. Curabitur
-		gravida arcu ac tortor dignissim convallis aenean et tortor. Egestas tellus rutrum tellus
-		pellentesque eu. Fusce ut placerat orci nulla pellentesque dignissim enim sit amet. Ut enim
-		blandit volutpat maecenas volutpat blandit aliquam etiam. Id donec ultrices tincidunt arcu. Id
-		cursus metus aliquam eleifend mi.
-	</p>
+    <!-- 未来职业愿景 -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-bold text-center mb-12 text-yellow-400">未来职业愿景</h2>
+      <div class="max-w-4xl mx-auto text-center">
+        <p class="text-xl text-gray-300 mb-4"><strong class="text-yellow-400">阶段性目标:</strong> 成为一家优秀 AI 产品公司的前端 Leader，打造世界一流的用户体验。</p>
+        <p class="text-xl text-gray-300"><strong class="text-yellow-400">长期愿景:</strong> 突破纯粹的职能边界，成长为能够影响产品和商业决策的技术管理者。</p>
+        <!-- 可视化时间线待实现 -->
+      </div>
+    </section>
 
-	<p>
-		Tempus quam pellentesque nec nam aliquam sem. Risus at ultrices mi tempus imperdiet. Id porta
-		nibh venenatis cras sed felis eget velit. Ipsum a arcu cursus vitae. Facilisis magna etiam
-		tempor orci eu lobortis elementum. Tincidunt dui ut ornare lectus sit. Quisque non tellus orci
-		ac. Blandit libero volutpat sed cras. Nec tincidunt praesent semper feugiat nibh sed pulvinar
-		proin gravida. Egestas integer eget aliquet nibh praesent tristique magna.
-	</p>
+    <!-- 个人品牌特色 -->
+    <section>
+      <h2 class="text-4xl font-bold text-center mb-12 text-yellow-400">个人品牌特色</h2>
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div class="text-center p-6 bg-gray-800/50 rounded-lg border border-gray-700/50">
+          <h4 class="text-xl font-bold text-gray-100 mb-2">实用主义的技术哲学</h4>
+          <p class="text-gray-400">技术是解决问题的工具，不盲从潮流，选择最适合业务场景的方案。</p>
+        </div>
+        <div class="text-center p-6 bg-gray-800/50 rounded-lg border border-gray-700/50">
+          <h4 class="text-xl font-bold text-gray-100 mb-2">数据驱动的管理风格</h4>
+          <p class="text-gray-400">通过客观数据评估项目进展和团队绩效，做出更科学的决策。</p>
+        </div>
+        <div class="text-center p-6 bg-gray-800/50 rounded-lg border border-gray-700/50">
+          <h4 class="text-xl font-bold text-gray-100 mb-2">持续学习的成长心态</h4>
+          <p class="text-gray-400">对未知保持好奇，坚信最好的投资是投资自己的大脑。</p>
+        </div>
+        <div class="text-center p-6 bg-gray-800/50 rounded-lg border border-gray-700/50">
+          <h4 class="text-xl font-bold text-gray-100 mb-2">跨界融合的创新思维</h4>
+          <p class="text-gray-400">乐于从不同领域汲取灵感，相信交叉点上诞生伟大的创新。</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
 </Layout>
