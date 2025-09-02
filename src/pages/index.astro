@@ -1,49 +1,806 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { getCollection } from 'astro:content';
+import FormattedDate from '../components/FormattedDate.astro';
+
+// 获取所有博客文章和日更文章
+const blogPosts = await getCollection('blog');
+const dailyPosts = await getCollection('daily');
+
+// 合并所有文章并按日期排序
+const allPosts = [...blogPosts, ...dailyPosts];
+const sortedPosts = allPosts.sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+
+// 计算统计数据
+const totalPosts = allPosts.length;
+const totalWords = allPosts.reduce((total, post) => {
+    // 估算字数（简单方式）
+    const content = post.body || '';
+    return total + content.length;
+}, 0);
+
+// 获取最新的3篇文章
+const recentPosts = sortedPosts.slice(0, 3);
+
+// 计算日更连击数据
+function calculateStreaks(dailyPosts) {
+    if (dailyPosts.length === 0) {
+        return {
+            currentStreak: 0,
+            longestStreak: 0,
+            monthlyCount: 0,
+            monthlyTotal: new Date().getDate() // 当前月份的天数
+        };
+    }
+
+    // 按日期排序日更文章
+    const sortedDailyPosts = dailyPosts.sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+    
+    // 获取所有发布日期（去重）
+    const publishDates = [...new Set(sortedDailyPosts.map(post => {
+        const date = new Date(post.data.pubDate);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }))].sort().reverse();
+
+    // 计算当前连击
+    let currentStreak = 0;
+    const today = new Date();
+    let checkDate = new Date(today);
+    
+    // 从今天开始往前检查
+    while (true) {
+        const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
+        
+        if (publishDates.includes(dateStr)) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            // 如果是今天且没有发布，继续检查昨天
+            if (checkDate.toDateString() === today.toDateString()) {
+                checkDate.setDate(checkDate.getDate() - 1);
+                continue;
+            }
+            break;
+        }
+    }
+
+    // 计算最长连击
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let prevDate = null;
+
+    for (const dateStr of publishDates.reverse()) {
+        const currentDate = new Date(dateStr);
+        
+        if (prevDate === null) {
+            tempStreak = 1;
+        } else {
+            const diffTime = prevDate.getTime() - currentDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+                tempStreak++;
+            } else {
+                longestStreak = Math.max(longestStreak, tempStreak);
+                tempStreak = 1;
+            }
+        }
+        
+        prevDate = currentDate;
+    }
+    longestStreak = Math.max(longestStreak, tempStreak);
+
+    // 计算本月完成天数
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const monthlyCount = publishDates.filter(dateStr => {
+        const date = new Date(dateStr);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    }).length;
+
+    // 计算本月总天数
+    const monthlyTotal = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    return {
+        currentStreak,
+        longestStreak,
+        monthlyCount,
+        monthlyTotal
+    };
+}
+
+const streakData = calculateStreaks(dailyPosts);
+
+// 生成动态月份数据
+function generateMonthsData(dailyPosts) {
+    if (dailyPosts.length === 0) {
+        // 如果没有日更文章，显示最近6个月
+        const months = [];
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            months.push({
+                name: date.toLocaleString('zh-CN', { month: 'long' }).replace('月', '月'),
+                year: date.getFullYear(),
+                month: date.getMonth()
+            });
+        }
+        return months;
+    }
+
+    // 获取所有发布日期
+    const publishDates = dailyPosts.map(post => new Date(post.data.pubDate));
+    const earliestDate = new Date(Math.min(...publishDates));
+    const latestDate = new Date(Math.max(...publishDates));
+    const today = new Date();
+    
+    // 确保包含到当前月份
+    const endDate = latestDate > today ? latestDate : today;
+    
+    const months = [];
+    let currentDate = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+    
+    while (currentDate <= endDate) {
+        months.push({
+            name: currentDate.toLocaleString('zh-CN', { month: 'long' }).replace('月', '月'),
+            year: currentDate.getFullYear(),
+            month: currentDate.getMonth()
+        });
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    // 如果月份太多，只显示最近的12个月
+    if (months.length > 12) {
+        return months.slice(-12);
+    }
+    
+    return months;
+}
+
+const monthsData = generateMonthsData(dailyPosts);
+
+// 准备贡献图数据
+const contributionData = dailyPosts.reduce((acc, post) => {
+    const date = new Date(post.data.pubDate);
+    // 确保日期格式正确（YYYY-MM-DD）
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    acc[dateStr] = 1; // 标记为有贡献
+    return acc;
+}, {});
+
+
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的个人博客 - 日更挑战</title>
+    
+    <!-- 百度统计 -->
+    <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?8661a6fc16bc8a1f0335a55db4f9b65c";
+      var s = document.getElementsByTagName("script")[0]; 
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 头部导航 */
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #2563eb;
+        }
+
+        /* 个人简介卡片 */
+        .profile-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .profile-info h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #2563eb;
+        }
+
+        .profile-info p {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-links a {
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #666;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .social-links a:hover {
+            background: #2563eb;
+            color: white;
+        }
+
+        /* 统计面板 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 日更可视化 */
+        .daily-challenge {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .daily-challenge h2 {
+            margin-bottom: 1rem;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .streak-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .contribution-graph {
+            overflow-x: auto;
+        }
+
+        .graph-container {
+            min-width: 600px;
+        }
+
+        .contribution-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .contribution-grid {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .day-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            padding-top: 20px;
+            height: 105px;
+            width: 40px;
+        }
+
+        .day-label {
+            height: 12px;
+            line-height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .calendar-graph {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .month {
+            width: 14px;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 2px;
+        }
+
+        .weeks {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .week {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .day {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            background: #ebedf0;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            display: block;
+        }
+
+        .day.level-1 { background: #c6e48b; }
+        .day.level-2 { background: #7bc96f; }
+        .day.level-3 { background: #239a3b; }
+        .day.level-4 { background: #196127; }
+
+        .day:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+            border-color: #2563eb;
+            z-index: 10;
+        }
+
+        .day.is-today {
+            border: 2px solid #2563eb;
+            box-shadow: 0 0 5px rgba(37, 99, 235, 0.4);
+        }
+
+        .day.is-today:hover {
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.8);
+        }
+
+        /* 最新文章 */
+        .recent-posts {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .recent-posts h2 {
+            margin-bottom: 1.5rem;
+            color: #2563eb;
+        }
+
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .post-item {
+            padding: 1.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .post-item:hover {
+            border-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.1);
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-date {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .post-type {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .post-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .post-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2563eb;
+        }
+
+        .post-excerpt {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .view-more-btn {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+            border: 1px solid #e5e7eb;
+        }
+
+        .view-more-btn:hover {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .profile-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .nav-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .streak-info {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">退场修行</div>
+            <ul class="nav-links">
+                <!-- <li><a href="/">首页</a></li> -->
+                <!-- <li><a href="/posts">所有文章</a></li> -->
+                <!-- <li><a href="/blog">博客</a></li> -->
+                <li><a href="/daily">日更</a></li>
+                 <!-- <li><a href="/about">关于我</a></li> -->
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 个人简介卡片 -->
+        <div class="profile-card">
+            <div class="avatar">YN</div>
+            <div class="profile-info">
+                <h1>半糖柠檬</h1>
+                <p>一个选择主动 Gap 的程序员，正在进行 100 天日更挑战 ✍️</p>
+                <div class="social-links">
+                    <a href="https://github.com/HalfSweetLemon">GitHub</a>
+                    <!-- <a href="#">邮箱</a> -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计面板 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{totalPosts}</div>
+                <div class="stat-label">总文章数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{totalWords.toLocaleString()}</div>
+                <div class="stat-label">总字数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{streakData.currentStreak}</div>
+                <div class="stat-label">连续日更</div>
+            </div>
+        </div>
+
+        <!-- 日更挑战可视化 -->
+        <div class="daily-challenge">
+            <h2>🔥 日更挑战进度</h2>
+            
+            <div class="streak-info">
+                <div>
+                    <strong>当前连击:</strong> {streakData.currentStreak}天
+                </div>
+                <div>
+                    <strong>最长连击:</strong> {streakData.longestStreak}天
+                </div>
+                <div>
+                    <strong>本月完成:</strong> {streakData.monthlyCount}/{streakData.monthlyTotal}天
+                </div>
+            </div>
+
+            <div class="contribution-graph">
+                <div class="graph-container">
+                    <div class="contribution-grid">
+                        <div class="day-labels">
+                            <div class="day-label">一</div>
+                            <div class="day-label"></div>
+                            <div class="day-label">三</div>
+                            <div class="day-label"></div>
+                            <div class="day-label">五</div>
+                            <div class="day-label"></div>
+                            <div class="day-label">日</div>
+                        </div>
+                        <div class="calendar-graph">
+                            <div id="month-labels" style="display: flex; margin-bottom: 8px; font-size: 12px; color: #666;">
+                                <!-- 月份标签会通过JavaScript生成 -->
+                            </div>
+                            <div class="weeks" id="contribution-graph">
+                                <!-- 这里会通过JavaScript生成贡献图 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; font-size: 0.75rem; color: #666; display: flex; align-items: center; justify-content: space-between;">
+                <span>点击方块查看详情</span>
+                <div style="display: flex; align-items: center; gap: 3px;">
+                    <span style="margin-right: 5px;">Less</span>
+                    <div style="width: 12px; height: 12px; background: #ebedf0; border-radius: 3px; border: 1px solid transparent;"></div>
+                    <div style="width: 12px; height: 12px; background: #c6e48b; border-radius: 3px; border: 1px solid transparent;"></div>
+                    <div style="width: 12px; height: 12px; background: #7bc96f; border-radius: 3px; border: 1px solid transparent;"></div>
+                    <div style="width: 12px; height: 12px; background: #239a3b; border-radius: 3px; border: 1px solid transparent;"></div>
+                    <div style="width: 12px; height: 12px; background: #196127; border-radius: 3px; border: 1px solid transparent;"></div>
+                    <span style="margin-left: 5px;">More</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最新文章 -->
+        <div class="recent-posts">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">📝 最新文章</h2>
+                <a href="/posts" class="view-more-btn">查看更多 →</a>
+            </div>
+            <div class="post-list">
+                {recentPosts.map((post) => {
+                    // 检查文章来自哪个集合
+                    const isDaily = dailyPosts.some(daily => daily.id === post.id);
+                    const postUrl = isDaily ? `/daily/${post.id}/` : `/blog/${post.id}/`;
+                    const postType = isDaily ? '日更' : '博客';
+                    
+                    return (
+                        <a href={postUrl} class="post-item">
+                            <div class="post-meta">
+                                <span class="post-date">
+                                    <FormattedDate date={post.data.pubDate} />
+                                </span>
+                                <span class="post-type">{postType}</span>
+                            </div>
+                            <div class="post-title">{post.data.title}</div>
+                            <div class="post-excerpt">
+                                {post.data.description}
+                            </div>
+                        </a>
+                    );
+                })}
+            </div>
+        </div>
+    </div>
+
+    <script define:vars={{ contributionData }}>
+        // 从服务端传递的真实贡献数据
+        const realContributions = contributionData;
+        
+        // 生成贡献图
+        function generateContributionGraph() {
+            const graph = document.getElementById('contribution-graph');
+            const monthLabels = document.getElementById('month-labels');
+            
+            console.log('贡献数据:', realContributions); // 调试信息
+            
+            // 清空现有内容
+            graph.innerHTML = '';
+            if (monthLabels) {
+                monthLabels.innerHTML = '';
+            }
+            
+            const today = new Date();
+            const endDate = new Date(today);
+            const startDate = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate() + 1);
+            
+            // 调整开始日期到周日
+            while (startDate.getDay() !== 0) {
+                startDate.setDate(startDate.getDate() - 1);
+            }
+            
+            console.log('时间范围:', startDate.toISOString().split('T')[0], '到', endDate.toISOString().split('T')[0]); // 调试信息
+            
+            // 如果月份标签元素存在，清空并生成月份标签
+            if (monthLabels) {
+                const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+                const currentMonth = today.getMonth();
+                
+                // 生成过去12个月的标签
+                for (let i = 0; i < 12; i++) {
+                    const monthIndex = (currentMonth - 11 + i + 12) % 12;
+                    const monthElement = document.createElement('div');
+                    monthElement.style.width = '40px';
+                    monthElement.style.textAlign = 'center';
+                    monthElement.textContent = months[monthIndex];
+                    monthLabels.appendChild(monthElement);
+                }
+            }
+            
+            // 简化贡献图生成
+            const todayStr = today.toISOString().split('T')[0];
+            let date = new Date(startDate);
+            
+            // 生成固定的53周
+            for (let week = 0; week < 53; week++) {
+                const weekElement = document.createElement('div');
+                weekElement.className = 'week';
+                
+                // 每周7天
+                for (let day = 0; day < 7; day++) {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'day';
+                    
+                    if (date <= endDate) {
+                        const dateStr = date.toISOString().split('T')[0];
+                        const hasContribution = realContributions[dateStr] || 0;
+                        const isToday = dateStr === todayStr;
+                        
+                        // 使用CSS类而不是内联样式
+                        if (hasContribution > 0) {
+                            dayElement.classList.add('level-1');
+                        }
+                        
+                        if (isToday) {
+                            dayElement.classList.add('is-today');
+                        }
+                        
+                        // 设置tooltip和点击事件
+                        const formattedDate = new Date(dateStr).toLocaleDateString('zh-CN');
+                        dayElement.title = `${formattedDate}: ${hasContribution > 0 ? '已发布日更 ✅' : '未发布 ❌'}${isToday ? ' (今天)' : ''}`;
+                        
+                        dayElement.addEventListener('click', () => {
+                            alert(`日期: ${formattedDate}\n状态: ${hasContribution > 0 ? '已发布日更 ✅' : '未发布 ❌'}${isToday ? '\n这是今天 🎯' : ''}`);
+                        });
+                        
+                        date.setDate(date.getDate() + 1);
+                    } else {
+                        // 超出范围的天数，设置为空白但保持结构
+                        dayElement.style.backgroundColor = 'transparent';
+                    }
+                    
+                    weekElement.appendChild(dayElement);
+                }
+                
+                graph.appendChild(weekElement);
+            }
+        }
+
+        // 页面加载完成后生成贡献图
+        document.addEventListener('DOMContentLoaded', generateContributionGraph);
+    </script>
+</body>
 </html>
