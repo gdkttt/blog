@@ -1,12 +1,15 @@
 // @ts-check
-
+import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
-import { defineConfig } from 'astro/config';
+import { remarkReadingTime } from './src/plugins/remark-reading-time.mjs';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'http://dany.life',
+  trailingSlash: 'never',
+  prefetch: true,
+
   // 输出目录
   outDir: './dist',
 
@@ -16,7 +19,29 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
 
-  integrations: [mdx(), sitemap()],
+  // Markdown 配置
+  markdown: {
+    remarkPlugins: [remarkReadingTime],
+    shikiConfig: {
+      theme: 'github-dark',
+      wrap: true,
+    },
+  },
+
+  // 图片优化
+  image: {
+    responsiveStyles: true,
+  },
+
+  integrations: [
+    mdx({
+      shikiConfig: {
+        theme: 'github-dark',
+        wrap: true,
+      },
+    }),
+    sitemap(),
+  ],
 
   // 开发服务器配置
   server: {
@@ -35,5 +60,12 @@ export default defineConfig({
         },
       },
     },
+    optimizeDeps: {
+      include: ['@astrojs/mdx'],
+    },
+  },
+
+  experimental: {
+    contentIntellisense: true,
   },
 });

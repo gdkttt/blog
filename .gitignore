@@ -104,3 +104,5 @@ temp/
 
 # Custom
 docs/
+
+.cursor
